@@ -1,0 +1,85 @@
+import pandas as pd
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.svm import SVC
+
+data = pd.read_excel('CTG.xls', sheet_name='Raw Data')
+
+def SVM(x,y,title):
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.20)
+    svcl = SVC(kernel='linear')
+    svcl.fit(x_train, y_train)
+    pred = svcl.predict(x_test)
+    print("--------------------------------------------------------------------------")
+    print(title)
+    print("--------------------------------------------------------------------------")
+    print("\nConfusion Matrix:\n", confusion_matrix(y_test, pred))
+    cr = classification_report(y_test,pred)
+    print("\nClassification Report:\n", cr)
+    cr = cr.split()
+    return float(cr[22]),float(cr[23])
+
+def plot(y,z):
+    fig=plt.figure()
+    f1 = fig.add_subplot(111,projection='3d')
+    f1.bar3d([1,2,3,4,5], y, z, 0.3, 0.3, 0.3, color='g')
+    label = ['Full', 'Normal', 'Abnormal', 'Short term', 'Long term']
+    f1.w_xaxis.set_ticklabels(label)
+    f1.w_yaxis.set_ticklabels(y)
+    f1.w_zaxis.set_ticklabels(z)
+    f1.set_xlabel("Index")
+    f1.set_ylabel("Precision")
+    f1.set_zlabel("Recall")
+    f1.set_title("Precision-Recall Graph")
+    plt.show()
+
+def setcolor():
+    col = []
+    for i in data['NSP']:
+        if i == 1:
+            col.append('g')
+        elif i == 2:
+            col.append('b')
+        else:
+            col.append('r')
+    return col
+
+def graph(x,y,z):
+    fig1 = plt.figure()
+    ax = fig1.add_subplot(111, projection='3d')
+    col = setcolor()
+    ax.scatter(x, y, z, c=col, s=10)
+    ax.set_title('Data Classes')
+    ax.set_xlabel('Baseline Values')
+    ax.set_ylabel('Normal Variability')
+    ax.set_zlabel('Abnormal Variability')
+    plt.show()
+
+def average(x,y):
+    avg = []
+    for i in range(len(x)):
+        avg.append((x[i]+y[i])/2)
+    return pd.DataFrame(avg)
+
+x = data.loc[:,'b':'DR']
+y = data['NSP']
+x1 = x[['LBE','AC','FM','UC','MSTV','MLTV']].copy()
+x2 = x[['LBE','AC','FM','UC','ASTV','ALTV']].copy()
+x3 = x[['LBE','AC','FM','UC','ASTV','MSTV']].copy()
+x4 = x[['LBE','AC','FM','UC','ALTV','MLTV']].copy()
+
+p=[];r=[]
+pr,re=SVM(x,y,'Entire Dataset');p.append(pr); r.append(re)
+pr,re = SVM(x1,y,'Normal Variability'); p.append(pr); r.append(re)
+pr,re=SVM(x2,y,'Abnormal Variability');p.append(pr); r.append(re)
+pr,re=SVM(x3,y,'Normal and Abnormal Short term Variability');p.append(pr); r.append(re)
+pr,re=SVM(x4,y,'Normal and Abnormal Long term Variability');p.append(pr); r.append(re)
+
+a = data['LBE']
+b = average(x1['MSTV'],x1['MLTV'])
+c = average(x2['ASTV'],x2['ALTV'])
+graph(a,b,c)
+plot(p,r)
+
